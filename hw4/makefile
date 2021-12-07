@@ -14,5 +14,5 @@ prog: main.o
 # 	g++ -c complex.cpp  -o complex.o
 
 clean:
-	rm -f *.out
+	rm -f prog
 	rm -f *.o
