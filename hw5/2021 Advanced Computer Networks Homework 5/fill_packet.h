@@ -14,6 +14,12 @@ typedef unsigned short u16;
 #define DEFAULT_SEND_COUNT 4
 #define DEFAULT_TIMEOUT 1500
 
+// ?
+#define IP_HEADER_SIZE      (sizeof(struct ip) + IP_OPTION_SIZE) / 4
+
+
+#define DEFAULT_SEND_COUNT 	4
+
 typedef struct
 {
 	struct ip ip_hdr;
@@ -30,6 +36,7 @@ fill_icmphdr (struct icmphdr *icmp_hdr);
 
 u16
 fill_cksum ( struct icmphdr *icmp_hdr);
+
  
 #endif
  
