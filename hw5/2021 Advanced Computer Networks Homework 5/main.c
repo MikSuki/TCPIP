@@ -93,6 +93,7 @@ int main(int argc, char *argv[])
 	 * in pcap.c, initialize the pcap
 	 */
 	pcap_init("140.117.168.42", timeout);
+	pcap_get_reply();
 
 	free(packet);
 

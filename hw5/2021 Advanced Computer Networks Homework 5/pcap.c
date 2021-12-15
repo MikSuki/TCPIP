@@ -11,7 +11,8 @@ static const char *dev = "eno1";
 static char *net;
 static char *mask;
 
-static char filter_string[FILTER_STRING_SIZE] = "icmp";
+// static char filter_string[FILTER_STRING_SIZE] = "icmp";
+static char filter_string[FILTER_STRING_SIZE] = "icmp and src host 140.117.168.45 and dst host 140.117.168.64";
 
 static pcap_t *p;
 static struct pcap_pkthdr hdr;
@@ -31,8 +32,6 @@ void pcap_init(const char *dst_ip, int timeout)
 	struct in_addr addr;
 
 	struct bpf_program fcode;
-
-	struct pcap_pkthdr header; /* The header that pcap gives us */
 
 	ret = pcap_lookupnet(dev, &netp, &maskp, errbuf);
 	if (ret == -1)
@@ -80,39 +79,40 @@ void pcap_init(const char *dst_ip, int timeout)
 		exit(1);
 	}
 
+}
+
+// For ICMP echo reply, please check the following fields:
+// 1. The source in IP header
+// 2. ICMP type
+// 3. The ID in ICMP message is matching what you have set.
+// 4. The sequence number in ICMP message is the same as echo request
+int pcap_get_reply(void)
+{
+	// const u_char *ptr;
+
+	// ptr = pcap_next(p, &hdr);
+
+	/*
+	 * google "pcap_next" to get more information
+	 * and check the packet that ptr pointed to.
+	 */
+	// https://www.tcpdump.org/pcap.html
+
+
 	int cnt = 1;
 	while (1)
 	// while (--cnt >= 0)
 	{
+		printf("Grabbed packet of length \n");
 		/* Grab a packet */
-		const u_char *packet = pcap_next(p, &header);
+		const u_char *ptr = pcap_next(p, &hdr);
 
-		printf("Grabbed packet of length %d\n", header.len);
+		printf("Grabbed packet of length %d\n", hdr.len);
 		printf("Ethernet address length is %d\n", ETHER_HDR_LEN);
 
-		// const struct sniff_ethernet *ethernet; /* The ethernet header */
-		// const struct sniff_ip *ip;			   /* The IP header */
-		// const struct sniff_tcp *tcp;		   /* The TCP header */
-		// const char *payload;				   /* Packet payload */
-		// /* For readability, we'll make variables for the sizes of each of the structures */
-		// int size_ethernet = sizeof(struct sniff_ethernet);
-		// int size_ip = sizeof(struct sniff_ip);
-		// int size_tcp = sizeof(struct sniff_tcp);
-
-		// ip = (struct sniff_ip *)(packet + ether_header);
-		// tcp = (struct sniff_tcp *)(packet + size_ethernet + size_ip);
-		// payload = (u_char *)(packet + size_ethernet + size_ip + size_tcp);
-
-		const struct sniff_ethernet *ethernet; /* The ethernet header */
-		// const struct sniff_ip *ip;			   /* The IP header */
-		const struct sniff_tcp *tcp; /* The TCP header */
-		const char *payload;		 /* Packet payload */
-
 		u_int size_ip;
-		u_int size_tcp;
 
-		// ethernet = (struct sniff_ethernet *)(packet);
-		const struct sniff_ip *ip = (struct sniff_ip *)(packet + SIZE_ETHERNET);
+		const struct sniff_ip *ip = (struct sniff_ip *)(ptr + SIZE_ETHERNET);
 
 		// printf("type: %d\n", ip->ip_tos);
 		printf("protocol: %d\n", ip->ip_p);
@@ -126,67 +126,13 @@ void pcap_init(const char *dst_ip, int timeout)
 		size_ip = IP_HL(ip) * 4;
 		printf("size: %d\n", size_ip);
 
-		const u_char *ptr = packet + SIZE_ETHERNET + size_ip;
+		struct icmphdr *icmp_header = (struct icmphdr *)(ptr + SIZE_ETHERNET + size_ip);
 
-		struct icmphdr *icmp_header = (struct icmphdr *)(packet + SIZE_ETHERNET + size_ip);
+		printf("type: %d\n", icmp_header->type);
+		printf("id: %d\n", ntohs(icmp_header->un.echo.id));
+		printf("seq: %d\n", ntohs(icmp_header->un.echo.sequence));
 
-		printf("type: %d\n", ptr[0]);
-		printf("seq: %d\n", ptr[6] + ptr[7]);
-		// printf("type: %d\n", icmp_header->type);
-		// printf("seq: %d\n", icmp_header->un.echo.sequence );
-
-		// if (size_ip < 20)
-		// {
-		// 	printf("   * Invalid IP header length: %u bytes\n", size_ip);
-		// 	return;
-		// }
-
-		// /* lets start with the ether header... */
-		// struct ip_header *eptr = (struct ip_header *)packet;
-		// printf("Ethernet type hex:%x dec:%d is an IP packet\n",
-		// 	   ntohs(eptr->ip_type),
-		// 	   ntohs(eptr->ip_type));
-
-		// /* Do a couple of checks to see what packet type we have..*/
-		// if (ntohs(eptr->ether_type) == ETHERTYPE_IP)
-		// {
-		// 	printf("Ethernet type hex:%x dec:%d is an IP packet\n",
-		// 		   ntohs(eptr->ether_type),
-		// 		   ntohs(eptr->ether_type));
-		// }
-		// else if (ntohs(eptr->ether_type) == ETHERTYPE_ARP)
-		// {
-		// 	printf("Ethernet type hex:%x dec:%d is an ARP packet\n",
-		// 		   ntohs(eptr->ether_type),
-		// 		   ntohs(eptr->ether_type));
-		// }
-		// else
-		// {
-		// 	printf("Ethernet type %x not IP", ntohs(eptr->ether_type));
-		// 	exit(1);
-		// }
-
-		// /* And close the session */
-		// pcap_close(p);
 	}
-}
-
-// For ICMP echo reply, please check the following fields:
-// 1. The source in IP header
-// 2. ICMP type
-// 3. The ID in ICMP message is matching what you have set.
-// 4. The sequence number in ICMP message is the same as echo request
-int pcap_get_reply(void)
-{
-	const u_char *ptr;
-
-	ptr = pcap_next(p, &hdr);
-
-	/*
-	 * google "pcap_next" to get more information
-	 * and check the packet that ptr pointed to.
-	 */
-	// https://www.tcpdump.org/pcap.html
 
 	return 0;
 }
