@@ -20,13 +20,13 @@ typedef unsigned short u16;
 
 #define DEFAULT_SEND_COUNT 	4
 
-typedef struct
+struct myicmp
 {
 	struct ip ip_hdr;
-	u8 ip_option[8];
+	// u8 ip_option[8];
 	struct icmphdr icmp_hdr;
 	u8 data[0];
-} myicmp ;
+};
 
 void 
 fill_iphdr ( struct ip *ip_hdr, const char* dst_ip);
@@ -37,6 +37,8 @@ fill_icmphdr (struct icmphdr *icmp_hdr);
 u16
 fill_cksum ( struct icmphdr *icmp_hdr);
 
- 
+extern pid_t pid;
+extern int seq;
+
 #endif
  

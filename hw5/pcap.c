@@ -7,7 +7,7 @@
 extern pid_t pid;
 extern u16 icmp_req;
 
-static const char *dev = "eno1";
+static const char *dev = "enp2s0f5";
 static char *net;
 static char *mask;
 

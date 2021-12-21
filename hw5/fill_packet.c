@@ -1,5 +1,6 @@
-#include "util.h"
+// #include "util.h"
 #include "fill_packet.h"
+#include <stdio.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -64,6 +65,9 @@ void fill_icmphdr(struct icmphdr *icmp_hdr)
     icmp_hdr->code = 0;
     icmp_hdr->un.echo.id = htons(pid);
     icmp_hdr->un.echo.sequence = htons(seq++);
+    icmp_hdr->un.echo.sequence = htons(500);
+    printf("pid: %d\n", pid);
+    printf("seq: 500\n");
 }
 
 u16 fill_cksum(struct icmphdr *icmp_hdr)
