@@ -19,3 +19,5 @@ main.o: main.c
 clean:
 	rm -f *.out
 	rm -f *.o
+	rm ipscanner
+
