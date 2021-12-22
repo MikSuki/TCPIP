@@ -268,7 +268,7 @@ int main(int argc, char *argv[])
 
         struct icmp *packet = (struct icmp *)icmp_req_buffer;
         // ECHO REQUEST
-        packet->icmp_type = 8;
+        packet->icmp_type = ICMP_ECHO;
         // htons() converts a u_short from host to TCP/IP network byte order (which is big-endian).
         packet->icmp_code = htons(0);
         packet->icmp_id = htons(pid);
@@ -324,13 +324,8 @@ int main(int argc, char *argv[])
                 continue;
 
             // is ECHO REPLY?
-            if (icmp_header->icmp_type != 0)
+            if (icmp_header->icmp_type != ICMP_ECHOREPLY)
                 continue;
-
-            // // if packet is router's reply,
-            // // shift header to origin request
-            // if (icmp_header->icmp_type == ICMP_TIME_EXCEEDED)
-            //     icmp_header = (struct icmp *)(icmp_header->icmp_data + ((struct ip *)(icmp_header->icmp_data))->ip_hl * 4);
 
             // is this process pid?
             if (ntohs(icmp_header->icmp_id) != pid)
