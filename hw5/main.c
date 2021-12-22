@@ -18,12 +18,18 @@ typedef unsigned short u16;
 #define PACKET_SIZE 92
 #define IP_HEADER_SIZE 8
 #define IP_OPTION_SIZE 8
-#define ICMP_PACKET_SIZE PACKET_SIZE - (int)sizeof(struct ip) - IP_OPTION_SIZE
-#define ICMP_DATA_SIZE ICMP_PACKET_SIZE - (int)sizeof(struct icmphdr)
 #define DEFAULT_SEND_COUNT 4
 #define DEFAULT_TIMEOUT 1500
-
 #define ICMP_HEADER_SIZE 8
+
+#define RED   "\x1B[31m"
+#define GRN   "\x1B[32m"
+#define YEL   "\x1B[33m"
+#define BLU   "\x1B[34m"
+#define MAG   "\x1B[35m"
+#define CYN   "\x1B[36m"
+#define WHT   "\x1B[37m"
+#define RESET "\x1B[0m"
 
 int TIMEOUT = 1000;
 char *interface;
@@ -214,12 +220,12 @@ int main(int argc, char *argv[])
     // -------------------------
     //   scan sunbnet
     // -------------------------
-    printf("my ip: %s\n", ip);
-    printf("my netmask:  %s\n", netmask);
-    printf("my interface: %s\n", interface);
-    printf("my pid: %d\n", pid);
-    printf("TIMEOUT: %dms\n", TIMEOUT);
-    printf("\n----------------------\nstart scan\n----------------------\n\n");
+    printf("my ip:        "YEL"%s\n"RESET, ip);
+    printf("my netmask:   "YEL"%s\n"RESET, netmask);
+    printf("my interface: "YEL"%s\n"RESET, interface);
+    printf("my pid:       "YEL"%d\n"RESET, pid);
+    printf("TIMEOUT:      "YEL"%dms\n"RESET, TIMEOUT);
+    printf("\n----------------------\n"BLU"  start scan"RESET"\n----------------------\n\n");
 
     struct in_addr ipaddress, subnetmask;
     inet_pton(AF_INET, ip, &ipaddress);
@@ -255,8 +261,8 @@ int main(int argc, char *argv[])
         // convert IPv4 address to binary
         inet_pton(AF_INET, str_cur_ip, &dst.sin_addr);
         // set socket timeout
-        time_start.tv_sec = TIMEOUT / 1000;
-        time_start.tv_usec = 0;
+        time_start.tv_sec = 0;
+        time_start.tv_usec = TIMEOUT * 1000;
         setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &time_start, sizeof(time_start));
         setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &time_start, sizeof(time_start));
 
@@ -335,8 +341,8 @@ int main(int argc, char *argv[])
 
             // set reply
             reply = (struct ip *)icmp_reply_buffer;
-            printf("         Reply from : %-16s, ", inet_ntoa(reply->ip_src));
-            printf("time : %fms\n", time_diff(time_start, time_cur));
+            printf(RED"         Reply from : %-16s, ", inet_ntoa(reply->ip_src));
+            printf("time : %fms\n"RESET, time_diff(time_start, time_cur));
 
             break;
         }
