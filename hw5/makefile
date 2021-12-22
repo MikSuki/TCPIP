@@ -1,7 +1,7 @@
 all: ipscanner
 
-ipscanner: util.o pcap.o fill_packet.o main.o 
-	gcc util.o pcap.o fill_packet.o main.o -o ipscanner -lpcap 
+ipscanner: main.o 
+	gcc main.o -o ipscanner
 
 
 util.o: util.c util.h
