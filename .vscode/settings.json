@@ -5,6 +5,7 @@
         "types.h": "c",
         "unistd.h": "c",
         "stdbool.h": "c",
-        "in.h": "c"
+        "in.h": "c",
+        "stdlib.h": "c"
     }
 }
