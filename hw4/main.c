@@ -6,6 +6,15 @@
 #include <arpa/inet.h>
 #include <netinet/ip_icmp.h>
 
+#define RED   "\x1B[31m"
+#define GRN   "\x1B[32m"
+#define YEL   "\x1B[33m"
+#define BLU   "\x1B[34m"
+#define MAG   "\x1B[35m"
+#define CYN   "\x1B[36m"
+#define WHT   "\x1B[37m"
+#define RESET "\x1B[0m"
+
 
 uint16_t checksum(uint16_t *addr, int count) {
     int sum = 0;
@@ -101,14 +110,16 @@ int main(int argc, char* argv[]) {
             // is this process pid?
 			if(ntohs(icmp_header->icmp_id) != pid) 
                 continue;
-			
+
+            printf("%-16s\r\n", inet_ntoa(reply->ip_src));
+
             // already to destination
             if(icmp_header->icmp_type == ICMP_ECHOREPLY){
                 ++terminate;
                 // set reply
 			    reply = (struct ip *) icmp_reply_buffer;
+                printf(RED"%-16s\r\n"RESET, inet_ntoa(reply->ip_src));
             }
-
             break;
 		}
 
@@ -116,8 +127,8 @@ int main(int argc, char* argv[]) {
     }
 
     if(terminate > 1)
-        printf("hop distance > destination distance\r\n");
-    else
-        printf("%-16s\r\n", inet_ntoa(reply->ip_src));
+        printf(RED"hop distance > destination distance\r\n"RESET);
+    // else
+    //     printf("%-16s\r\n", inet_ntoa(reply->ip_src));
     return 0;
 }

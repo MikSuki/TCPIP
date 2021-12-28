@@ -1,13 +1,17 @@
-#include <netdb.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <sys/time.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/select.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <pthread.h>
 
-#define MAX 80
-#define BUFFER_SIZE 32
 #define PORT 8080
-#define SA struct sockaddr
 
 #define RED "\x1B[31m"
 #define GRN "\x1B[32m"
@@ -18,146 +22,145 @@
 #define WHT "\x1B[37m"
 #define RESET "\x1B[0m"
 
-int sockfd;
+#define BUFFER_SIZE 32
+#define COMMAND_SIZE 5
+
+int normal_sockfd;
 int priority_sockfd;
-char buff[MAX];
-char cmd[BUFFER_SIZE];
-int send_flag = 0;
-int global_cnt = 0;
+char input[BUFFER_SIZE];
+char data[512];
+static int global_cnt = 0;
+int send_data_flag = 0;
+int terminate = 0;
 
 void sendToServer(int sockfd, char *message)
 {
 	char m[BUFFER_SIZE * 2];
 	++global_cnt;
-	sprintf(m, "%s %d", message, global_cnt);
-	// strcat(message, itoa(global_cnt));
+	sprintf(m, "%s %s %d", message, "   ", global_cnt);
 	write(sockfd, m, sizeof(m));
 }
 
-void send_garbage_message(void *message)
+// normol socket: send data
+void *send_data(void *message)
 {
-	int cnt = 0;
 	while (1)
 	{
-		// if (++cnt > 1)
-		// {
-		// printf("send %s\n", message);
-		sendToServer(sockfd, message);
-		// write(sockfd, message, sizeof(message));
-		// cnt = 0;
-		// }
+		if (send_data_flag)
+			sendToServer(normal_sockfd, message);
 	}
 }
 
-void process_priority_cmd()
+// priority socket: send command
+void send_cmd()
 {
-	while (1)
+	char cmd[COMMAND_SIZE + 1];
+	strncpy(cmd, &input[0], COMMAND_SIZE);
+
+	if (strcmp(cmd, "start") == 0)
 	{
-		if (!send_flag)
-			continue;
-		printf(RED);
-		if (cmd[0] == 'p' && cmd[1] == '-')
-		{
-			printf("priority command\n");
-			// write(priority_sockfd, cmd, BUFFER_SIZE);
-			sendToServer(priority_sockfd, cmd);
-		}
-		else if (cmd[0] == 'n' && cmd[1] == '-')
-		{
-			printf("normal command\n");
-		}
-		else
-		{
-			printf("command error\n");
-			// int n = write(priority_sockfd, cmd, BUFFER_SIZE);
-			// if (n < 0)
-			// 	perror("ERROR reading from socket");
-		}
-		printf(RESET);
-		printf("send\n");
-		send_flag = 0;
+		printf(GRN "start\n" RESET);
+		send_data_flag = 1;
+		sendToServer(priority_sockfd, cmd);
 	}
+	else if (strcmp(cmd, "stop") == 0)
+	{
+		printf(GRN "stop\n" RESET);
+		send_data_flag = 0;
+		sendToServer(priority_sockfd, cmd);
+	}
+	else if (strcmp(cmd, "quit") == 0)
+	{
+		printf(GRN "quit\n" RESET);
+		sendToServer(priority_sockfd, cmd);
+		terminate = 1;
+	}
+	else
+	{
+		printf(RED "command error~\n" RESET);
+	}
+	printf("cnt is: %d\n", global_cnt);
 }
 
 int main()
 {
-	struct sockaddr_in servaddr, cli;
+	struct sockaddr_in servaddr;
 
-	// socket create and varification
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	normal_sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	priority_sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
-	printf("pri: %d\n", priority_sockfd);
-	printf("nor: %d\n", sockfd);
+	if (priority_sockfd < normal_sockfd)
+	{
+		priority_sockfd ^= normal_sockfd;
+		normal_sockfd ^= priority_sockfd;
+		priority_sockfd ^= normal_sockfd;
+	}
 
-	if (sockfd == -1)
+	if (normal_sockfd == -1)
 	{
 		printf("socket creation failed...\n");
 		exit(0);
 	}
-	else
-		printf("Socket successfully created..\n");
-	bzero(&servaddr, sizeof(servaddr));
+	if (priority_sockfd == -1)
+	{
+		printf("socket creation failed...\n");
+		exit(0);
+	}
 
-	// assign IP, PORT
+	// set address
+	char str_ip[19];
+	printf("\n----------------------------------");
+	printf("\n  input " MAG "IP:\n" RESET);
+	printf("----------------------------------\n\n");
+	scanf("%s", str_ip);
+	bzero(&servaddr, sizeof(servaddr));
 	servaddr.sin_family = AF_INET;
-	servaddr.sin_addr.s_addr = inet_addr("140.117.168.64");
-	// servaddr.sin_addr.s_addr = inet_addr("10.0.0.1");
+	servaddr.sin_addr.s_addr = inet_addr(str_ip);
 	servaddr.sin_port = htons(PORT);
 
 	// connect the client socket to server socket
-	if (connect(sockfd, (SA *)&servaddr, sizeof(servaddr)) != 0)
+	if (connect(normal_sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) != 0)
 	{
 		printf("connection with the server failed...\n");
 		exit(0);
 	}
 	else
-		printf("connected to the server..\n");
+		printf(CYN "normal socket" RESET ": connected to the server..\n");
 
 	// connect the client socket to server socket
-	if (connect(priority_sockfd, (SA *)&servaddr, sizeof(servaddr)) != 0)
+	if (connect(priority_sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) != 0)
 	{
 		printf("connection with the server failed...\n");
 		exit(0);
 	}
 	else
-		printf("connected to the server..\n");
-
-	int n;
+		printf(CYN "priority socket" RESET ": connected to the server..\n");
 
 	pthread_t tid;
 
-	pthread_create(&tid, NULL, send_garbage_message, "n-11111111");
+	printf("\n----------------------------------");
+	printf("\n  input " GRN "data:\n" RESET);
+	printf("----------------------------------\n\n");
+	scanf("%s", data);
+	// data[0] = 'd';
+	// data[1] = 'a';
+	// data[2] = 't';
+	// data[3] = 'a';
 
-	pthread_create(&tid, NULL, process_priority_cmd, NULL);
+	pthread_create(&tid, NULL, send_data, data);
 
-	while (1)
+	while (!terminate)
 	{
-		printf("input cmd\n");
-		scanf("%s", cmd);
-		printf("your cmd: %s\n", cmd);
-		send_flag = 1;
-		
-		// printf("in while\n");
-		// process_priority_cmd();
-		// bzero(buff, sizeof(buff));
-		// printf("Enter the string : ");
-		// n = 0;
-		// while ((buff[n++] = getchar()) != '\n')
-		// 	;
-		// write(sockfd, buff, sizeof(buff));
-		// bzero(buff, sizeof(buff));
-		// read(sockfd, buff, sizeof(buff));
-		// printf("From Server : %s", buff);
-		// if ((strncmp(buff, "exit", 4)) == 0)
-		// {
-		// 	printf("Client Exit...\n");
-		// 	break;
-		// }
+		printf("\n----------------------------------\n");
+		printf("  input " YEL " cmd:\n" RESET);
+		printf("----------------------------------\n\n");
+		printf(RED);
+		scanf("%s", input);
+		printf(RESET);
+		send_cmd();
 	}
 
-	// close sockets
-	pthread_exit(NULL);
-	close(sockfd);
+	pthread_cancel(tid);
+	close(normal_sockfd);
 	close(priority_sockfd);
 }

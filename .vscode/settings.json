@@ -6,6 +6,9 @@
         "unistd.h": "c",
         "stdbool.h": "c",
         "in.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "netdb.h": "c",
+        "socket.h": "c",
+        "select.h": "c"
     }
 }
