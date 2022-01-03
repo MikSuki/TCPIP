@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
     const int ICMP_HEADER_LEN = 8;
     const int BUFFER_SIZE = 1024;
     // get pid
-    const int pid = getpid();  
+    const uint16_t pid = getpid();  
     int ttl;
     // if terminate > 1, hop distance > destination distance
     int terminate = 0;  
@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
 				continue;
 			
             // is protocol ICMP?
-			if(reply->ip_p != IPPROTO_ICMP) 
+			if(reply->ip_p != 1) 
                 continue;  
 
             // neither router's nor destination's reply
@@ -111,8 +111,6 @@ int main(int argc, char* argv[]) {
 			if(ntohs(icmp_header->icmp_id) != pid) 
                 continue;
 
-            printf("%-16s\r\n", inet_ntoa(reply->ip_src));
-
             // already to destination
             if(icmp_header->icmp_type == ICMP_ECHOREPLY){
                 ++terminate;
@@ -120,6 +118,9 @@ int main(int argc, char* argv[]) {
 			    reply = (struct ip *) icmp_reply_buffer;
                 printf(RED"%-16s\r\n"RESET, inet_ntoa(reply->ip_src));
             }
+            else
+                printf("%-16s\r\n", inet_ntoa(reply->ip_src));
+
             break;
 		}
 
