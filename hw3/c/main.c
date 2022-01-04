@@ -22,8 +22,8 @@
  * You have to use "enp2s0f5" when you ready to upload your homework.
  */
 // #define DEVICE_NAME "enp2s0f5"
-// #define DEVICE_NAME "h1-eth0"
-#define DEVICE_NAME "eno1"
+#define DEVICE_NAME "h1-eth0"
+// #define DEVICE_NAME "eno1"
 
 #define RED "\x1B[31m"
 #define GRN "\x1B[32m"

@@ -117,10 +117,16 @@ int main(int argc, char *argv[])
             // already to destination
             if (icmp_header->icmp_type == ICMP_ECHOREPLY)
             {
-                ++terminate;
-                // set reply
-                reply = (struct ip *)icmp_reply_buffer;
-                printf(RED "%-16s\r\n" RESET, inet_ntoa(reply->ip_src));
+                if (ttl == atoi(argv[1]))
+                {
+                    terminate = 1;
+                    printf(RED "%-16s\r\n" RESET, inet_ntoa(reply->ip_src));
+                }
+                else
+                {
+                    terminate = 2;
+                    printf("%-16s\r\n", inet_ntoa(reply->ip_src));
+                }
             }
             else
                 printf("%-16s\r\n", inet_ntoa(reply->ip_src));
@@ -128,11 +134,11 @@ int main(int argc, char *argv[])
             break;
         }
 
-        if (terminate > 1)
+        if (terminate >= 1)
             break;
     }
 
-    if (terminate > 1)
+    if (terminate >= 2)
         printf(RED "hop distance > destination distance\r\n" RESET);
     // else
     //     printf("%-16s\r\n", inet_ntoa(reply->ip_src));
