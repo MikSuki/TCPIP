@@ -5,11 +5,17 @@
 # ch.18 TCP Connection Establishment and  Termination
 
 - Three-way handshaking
+    + 重點是 Ack number 都是對方 seq + 1
+  <img src="img/3way_handshaking.png" style="zoom:70%"/>
+
 - terminate by FIN
+    + FIN -> ACK -> FIN -> ACK
+  <img src="img/TCP_terminate.png" style="zoom:100%"/>
 - MSS
 - half-close
 - TCP state transiton 
 - 2MSL Wait State
+    + 避免最後的 FIN 遺失
 - quiet time
   
 <br>
