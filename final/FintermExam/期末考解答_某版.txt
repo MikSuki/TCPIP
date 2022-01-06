@@ -1,0 +1,134 @@
+1.
+  a.所述的兩種情況,可以從SYN packet中的sequence number看出不同而加以區分.
+    Retransmission之封包它的SYN應該會和Original封包之ISN一樣.
+    New Connection之封包它的SYN應該會和Original封包之ISN不同.
+    (這是因為ISN是clock-generated ) 
+
+  b.一般正常的情況下,A收到SYN packet後會reply SYN+ACK給B,並在該packet中指明
+    A的window size大小.特殊case 如下:
+    <1>'duplicate case':此情況代表A先回覆給B的SYN+ACK已遺失,所以收到來自B重送的
+                        SYN後會再reply一次SYN+ACK給B
+    <2>'new'      case':A會針對具有新的sequence number之新連線reply SYN+ACK給B
+    <3>'如果SYN package中所指的destination port並沒有楚於listening狀態下,則A在收到
+        SYN package後將會reply一個RST+ACK package給B代表拒絕連線.
+
+
+2.AdvertiseWindow Field Need 28 bits
+  AdvertiseWindow Size=10G/8*0.14=0.175G
+  It needs 28-bits field to present.
+
+  SequnceNum Field needs 37 bits
+  10G/8*60=75G
+  It needs 37-bits field to present.
+
+3.由於沒有使用window scale factor,所以TCP capacity最大為65536(16bits window-size)
+  capacity=bandwidth*RTT 所以 65535=bandwidth/RTT ,所以upper bound=65536/RTT
+
+4.Negal's ALGO:
+                 1.TCP送出第一個segment當接收到來自sending application之program
+                   即使是只有1byte.
+                 2.在送完第一個segment後,TCP在output buffer累積data,直到
+                   a.收到來自於receiver之ACK時
+                   b.已經累積至 fill a maximum-size segment
+                   在這兩種情況時,便送出這個segment.
+                 3. step 2 is repeat for the rest of transmission
+
+5.No,因為是simultaneous open是發生在兩端應用程式皆以active open方式與對方開啟連線.
+     而telnet應用程式連線皆在server端進行passive open而不是以active open開啟連線.
+
+6.Yes.因為retransmisson ambighity problem是當sender收到一個已經送之segment的ACK
+      ,sender端不知道ACK究竟是origianl的,還是retransmission的ACK,因此如果TCP利用了
+      timestamp的方法,便能利用時間先後關係來辨識究竟是origianl的還是restransmission              
+
+7.TCP中所謂self-clocking behavior是指TCP在congestion control機制方面,不需外部clock
+     或同步機制即可以達到自我調節速度之功能.
+
+8.TCP中所謂repacketization是指當TCP需重送封包時,封包資料內容不一定完全跟以前一樣.
+     可以將重送之資料與其他待送資料重新打包後一起傳送.
+
+9.TCP中所謂的silly window syndrome是指當發送端應用程式產生資料的速度很慢時,或接收
+     端消化資料的速度很慢時,或著兩種情況同時發生時,整個傳輸的效率會大大的降低之現象
+     .原因在於TCP header + IP Header之byte >> TCP data bytes.
+
+10.
+   a.理想的狀態下經過一個RTT時間會有N個ACK,此處的 N=cwnd/MSS
+     congestion avoidance algo希望在每收到一個ack後, cwnd增加 1/N 個MSS的大小
+     亦即以byte單位計算之遞增量 Increment=MSS/(cwnd/MSS)=(MSS*MSS)/cwnd
+
+   b.由於實際的封包傳送並不是每個segment都是MSS大小,再加上可能有restransmission or 
+     duplicate ACK之情形會導致RTT時間內的ACK數不一定就是N= cnwd/MSS,因此比較精確的
+     遞增量應該是Increment=(segsize*segsize)/cwnd 並且必須限定不論RTT時間內共收到多
+     個ACK,一個RTT時間之Increment最大也只能為1個MSS.
+
+11.a.No! 因為TCP connection 是虛擬的connection,並非真正有有兩主機具有固定的一條傳送路徑
+     也就是說資料封包在layer3傳送時,各個ip datagram可能經由不同router走不同的路徑.
+   b.No! 因為FTP server收到來自client連線要求並建立control connection後,會在另外使用一個
+     不同的port和client建立data connection.
+
+12.No! TCP接受資料後不只看destination port來決定資料要丟給哪一個application process,
+   而是要根據 socket pair,也就是src IP,src port,dest IP,dest port.四個值來決定.
+   (因為可能 Server at a port may support multiple simultaneous TCP connections/sockets)
+
+13.控制資料流量進入網路是由 cwnd(congestion window size)與rwnd (receiver-advertised window size)
+   cwnd:是sender端依據網路congestion的狀況而定.
+   rwnd:是receiver端依據avalible buffer size決定.
+   整個flow control=> actual window size=minimum(cwnd,rwnd)之值作為依據
+
+14.在time out情況發生時,可能網路通訊真的出狀況,才會使用slow start演算法並重設cwnd初值為1MSS.
+   而sender收到duplicate ACKs的狀況下,既然仍能收到封包代表網路仍有資料流動,所以仍就可增加cwnd
+   ,此即所謂的fast recovery.
+
+15.當TCP connection建議後是使用slow start algo,一直到ssthresh(slow start threshold)才會改用
+   congestion avoidance algo,之後若發生等待以傳送封包之ACK發生time out之狀況,才會再換回slow
+   start algo.
+
+16.<1> DNS中的point query也就是所謂的反向查詢,意即轉換IP address成domain name.
+   <2> 22.176.117.140.in-addr.arpa.
+
+17.receiver端之window size由零變成非0值後,會發送一個具新的window size值之ack給sender端,
+   但因為ACK有可能遺失而未被sender端收到,加上ACK是unreliable性質的封包,因此若sender端一直
+   沒有傳送封包給receiver,receiver並不知道sender是否有收到該ACK 如果一來需要額外的extra timer
+   來進行ACK重送的處理.(Persistence deadlock)
+
+18.BOOTP之operation分為兩種情況如下
+   <1> BOOTP server與client在同一個網路內:
+       a.BOOPT server 使用passive open 方式開啟一個UDP port等待client
+       b.BOOPT client 以  active open及UDP方式傳送request封包至server.
+         該UDP封包之source IP全為0,destion IP全為1 使用broadcast傳送.
+       c.BOOPT server以broadcasr或unicast方式將reply封包回傳給client
+   <2>BOOTP server與client在不同網路
+       a.因為廣播封包會被router檔調,所以在BOOTP client同一網路中須有一部reply agent
+         機器作為BOOTP server 與 BOOTP client間的橋樑.
+       b.client 以broadcast方式送出request封包,relay agent收到後以unicast方式
+         經由路由器傳送至server,server將reply封包傳回給relay agent後,relay agent在轉送client
+
+19.sorcerer's apprentice bug會發生在TFTP中,當sender傳送封包給receiver後,receiver回傳之ACK較
+   晚到,sender若在未收到ACK前就Time out而重送,如此將會陸續收到同一資料的ACK封包兩次,sender便
+   會傳送下一筆資料封包兩次,並也會收到兩個對應之ACK,如果下去依此類推,造成資料重複傳遞的情形.
+
+20.
+   <1>source-base tree approach進行multicasting時,每個router對每一個群組需建立一個shortest path tree.
+      group-share tree approach則只有core router需要對每一個群組建立一個shortest path tree.
+   <2>source-base tree approach之multicasting protocal 譬如 DVMRP MOSPF
+      group-share tree approach之multicasting protocal 譬如 CBT
+
+21.不會
+
+
+22.
+   <1>由於TCP為可靠性傳輸,因此當retransmission發生時,可能會導致較高之時間延遲.
+   <2>資料封包因為遺失時間若過長,即使收到重送之封包,該封包資料可能已失去意義.
+   <3>real-time multimedia之應用常會伴隨multicasting情形,而TCP較不易支援multicasting.
+
+
+
+
+
+
+
+
+
+
+
+                   
+  
