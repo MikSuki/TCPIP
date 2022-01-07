@@ -1,4 +1,5 @@
 # ch.17 TCP overview
+<img src="img/TCP_header.png" style="zoom:100%"/>
   
 <br>
 
@@ -53,12 +54,15 @@
         * retransmission ambiguity problem
 - Congestion
     + Jacobson‘s fast retransmit algorithm
+    <img src="img/TCP_congestion.png" style="zoom:100%"/>
 - Congestion Avoidence
     + 2 indications of packet loss
     + algorithm 
         * cwnd
         * ssthresh
 - Fast Retransmit
+    + timeout
+    + 3 ack duplicate
 - Fast Recovery 
 - Repacketization
 
