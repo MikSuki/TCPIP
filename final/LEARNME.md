@@ -109,7 +109,7 @@
     + give an example
 - PAWS
 - TCP Performance 
-    + BW = <font color=red>Window/RTT </font>
+    + BW = <font color=red>Window / RTT </font>
 - TCP受到1G和光速限制
 
 
