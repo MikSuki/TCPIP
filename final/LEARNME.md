@@ -7,16 +7,25 @@
 
 - Three-way handshaking
     + 重點是 Ack number 都是對方 seq + 1
-  <img src="img/3way_handshaking.png" style="zoom:70%"/>
+  <img src="img/3way_handshaking.png" style="zoom:100%"/>
 
 - terminate by FIN
-    + FIN -> ACK -> FIN -> ACK
+    + FIN -> ACK -> FIN -> ACK <br>
   <img src="img/TCP_terminate.png" style="zoom:100%"/>
+    
+
 - MSS
 - half-close
 - TCP state transiton 
+    +  client <br>
+        * FIN_WAIT_1 
+        * FIN_WAIT_2
+  <img src="img/TCP_terminate_client.png" style="zoom:100%"/>
+    +  server <br>
+  <img src="img/TCP_terminate_server.png" style="zoom:100%"/>
 - 2MSL Wait State
-    + 避免最後的 FIN 遺失
+    + MSL
+    + 避免最後的 FIN ACK 遺失
 - quiet time
   
 <br>
@@ -36,9 +45,9 @@
 - push flag
 - Sliding Windows
 - Slow Start
-    + cwnd &nbsp;(sender's flow control)
-    + win &nbsp;&nbsp;&nbsp; (receiver’s flow control)
     + algorithm
+      * cwnd &nbsp;(sender's flow control)
+      * win &nbsp;&nbsp;&nbsp; (receiver’s flow control)
     + exponential increase
 - bandwidth-delay product
 - urgent mode
@@ -54,17 +63,28 @@
         * retransmission ambiguity problem
 - Congestion
     + Jacobson‘s fast retransmit algorithm
-    <img src="img/TCP_congestion.png" style="zoom:100%"/>
+    
 - Congestion Avoidence
     + 2 indications of packet loss
     + algorithm 
         * cwnd
         * ssthresh
+        * 3 duplicate ack -> slow start
+        * TIMEOUT -> congestion
+    <img src="img/TCP_congestion.png" style="zoom:100%"/>
+    + cwnd ← cwnd＋(segsize × segsize)／cwmd＋ segsize ／ 8
+
 - Fast Retransmit
-    + timeout
-    + 3 ack duplicate
+    + retransmit timer
+    + 3 ack duplicate 
 - Fast Recovery 
+    + 3 duplicate ack後，不進入 slow start，且減半 ssthresh
 - Repacketization
+- Congestion control
+    1. slow start
+    2. congestion avoidence
+    3. fast retransmit
+    4. fast recovery
 
 <br>
 
